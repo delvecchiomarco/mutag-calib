@@ -1,5 +1,9 @@
 ptetatau21_reweighting:
   2022_preEE:
-    mycorrection.json
+    FatJetGood_pt_eta_tau21_2022_preEE_reweighting.json
   2022_postEE:
-    mycorrection_2022_postEE.json
+    FatJetGood_pt_eta_tau21_2022_postEE_reweighting.json
+  2023_preBPix:
+    FatJetGood_pt_eta_tau21_2023_preBPix_reweighting.json
+  2023_postBPix:
+    FatJetGood_pt_eta_tau21_2023_postBPix_reweighting.json
