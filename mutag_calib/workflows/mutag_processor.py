@@ -26,6 +26,7 @@ class mutagAnalysisProcessor(fatjetBaseProcessor):
         selection_fatjet = StandardSelection(cuts_fatjet)
         selection_fatjet.prepare(
             events=self.events,
+            processor_params=self.params,
             year=self._year,
             sample=self._sample,
             isMC=self._isMC,

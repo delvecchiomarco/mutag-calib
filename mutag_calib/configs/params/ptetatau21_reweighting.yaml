@@ -1,9 +1,9 @@
 ptetatau21_reweighting:
   2022_preEE:
-    FatJetGood_pt_eta_tau21_2022_preEE_reweighting.json
+    /afs/cern.ch/user/d/delvecch/mutag-calib/pt_3d_reweighting_Run3/2022_preEE/FatJetGood_pt_eta_tau21_2022_preEE_reweighting.json
   2022_postEE:
-    FatJetGood_pt_eta_tau21_2022_postEE_reweighting.json
+    /afs/cern.ch/user/d/delvecch/mutag-calib/pt_3d_reweighting_Run3/2022_postEE/FatJetGood_pt_eta_tau21_2022_postEE_reweighting.json
   2023_preBPix:
-    FatJetGood_pt_eta_tau21_2023_preBPix_reweighting.json
+    /afs/cern.ch/user/d/delvecch/mutag-calib/pt_3d_reweighting_Run3/2023_preBPix/FatJetGood_pt_eta_tau21_2023_preBPix_reweighting.json
   2023_postBPix:
-    FatJetGood_pt_eta_tau21_2023_postBPix_reweighting.json
+    /afs/cern.ch/user/d/delvecch/mutag-calib/pt_3d_reweighting_Run3/2023_postBPix/FatJetGood_pt_eta_tau21_2023_postBPix_reweighting.json
