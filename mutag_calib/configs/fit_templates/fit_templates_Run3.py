@@ -29,7 +29,8 @@ parameters = defaults.merge_parameters_from_files(default_parameters,
                                                 f"{localdir}/params/mutag_calibration.yaml",
                                                 update=True)
 
-samples = ["QCD_MuEnriched", "VJets", "TTto4Q","TWminus", "TWplus", "DATA_BTagMu"]
+# samples = ["QCD_MuEnriched", "VJets", "TTto4Q","TWminus", "TWplus", "DATA_BTagMu"]
+samples = ["QCD_MuEnriched"]
 subsamples = {}
 for s in filter(lambda x: 'DATA_BTagMu' not in x, samples):
     subsamples[s] = {f"{s}_{f}" : [get_flavor(f)] for f in ['l', 'c', 'b', 'cc', 'bb']}
@@ -119,8 +120,8 @@ multicuts = [
 cfg = Configurator(
     parameters = parameters,
     datasets = {
-        "jsons": ["datasets/MC_QCD_MuEnriched_run3.json",
-                  "datasets/MC_VJets_run3.json",
+        "jsons": ["datasets/MC_QCD_MuEnriched_run3_redirector.json",
+                  "datasets/MC_VJets_run3_redirector.json",
                   "datasets/MC_TTto4Q_run3.json",
                   "datasets/MC_SingleTop_semileptonic_run3.json",
                   "datasets/MC_SingleTop_fullyhadronic_run3.json",
