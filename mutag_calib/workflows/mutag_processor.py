@@ -86,7 +86,7 @@ class mutagAnalysisProcessor(fatjetBaseProcessor):
             self.ptetatau21_reweighting(variation)
             for pos, hists in self.histograms_to_reweigh["by_pos"].items():
                 for histname in hists:
-                    self.custom_histogram_weights[histname] = self.weight_3d[pos]
+                    self.custom_histogram_weights[histname] = self.weight_3d[pos]["nominal"]
 
     # We redefine the fill_histograms method in order to use the custom histogram weights
     def fill_histograms(self, variation):
