@@ -14,7 +14,8 @@ import yaml
 from pathlib import Path
 from coffea.util import load
 
-from pocket_coffea.utils.stat import MCProcess, DataProcess, SystematicUncertainty, Datacard, Processes, Systematics, combine_datacards
+from pocket_coffea.utils.stat import MCProcess, DataProcess, SystematicUncertainty, Datacard, MCProcesses, DataProcesses, Systematics
+from pocket_coffea.utils.stat.combine import combine_datacards
 
 # Import the configuration to get the same parameters
 import mutag_calib
@@ -35,7 +36,7 @@ def define_processes(years):
     """Define MC and data processes for the analysis."""
     
     # Define MC processes based on flavor tagging
-    mc_processes = Processes([
+    mc_processes = MCProcesses([
         MCProcess(
             name="light",
             samples=[],  # Will be populated from sample names ending with _l
@@ -60,11 +61,11 @@ def define_processes(years):
     ])
     
     # Define data process
-    data_processes = Processes([
+    data_processes = DataProcesses([
         DataProcess(
             name="data_obs",
             samples=[],  # Will be populated from sample names starting with DATA_
-            years=years,
+            # years=years,
         )
     ])
     
@@ -102,14 +103,14 @@ def define_systematics(years, mc_process_names):
         # Add basic systematic uncertainties
         SystematicUncertainty(
             name="lumi", 
-            type="lnN",
+            typ="lnN",
             processes=mc_process_names,
             value=1.025,  # 2.5% luminosity uncertainty
             years=years,
         ),
         SystematicUncertainty(
             name="pileup",
-            type="lnN", 
+            typ="lnN", 
             processes=mc_process_names,
             value=1.01,  # 1% pileup uncertainty
             years=years,
@@ -117,14 +118,14 @@ def define_systematics(years, mc_process_names):
         # Add process-specific uncertainties
         SystematicUncertainty(
             name="light_norm",
-            type="lnN",
+            typ="lnN",
             processes=["light"],
             value=1.10,  # 10% normalization uncertainty for light jets
             years=years,
         ),
         SystematicUncertainty(
             name="c_norm", 
-            type="lnN",
+            typ="lnN",
             processes=["c"],
             value=1.15,  # 15% normalization uncertainty for c jets
             years=years,
@@ -143,8 +144,10 @@ def main():
     parser = argparse.ArgumentParser(description="Create combine datacards from pocketcoffea output")
     parser.add_argument("input_file", help="Path to the pocketcoffea output .coffea file")
     parser.add_argument("--output-dir", "-o", default="datacards", help="Output directory for datacards")
-    parser.add_argument("--variable", default="FatJetGood_msoftdrop", help="Variable to use for the fit")
-    parser.add_argument("--years", nargs="+", default=["2022_preEE", "2022_postEE", "2023_preBPix", "2023_postBPix"], 
+    parser.add_argument("--variable", default="FatJetGood_logsumcorrSVmass_tau21", help="Variable to use for the fit")
+    # parser.add_argument("--years", nargs="+", default=["2022_preEE", "2022_postEE", "2023_preBPix", "2023_postBPix"], 
+    #                    help="Years to include in the analysis")
+    parser.add_argument("--years", nargs="+", default=["2023_preBPix", "2023_postBPix"], 
                        help="Years to include in the analysis")
     
     args = parser.parse_args()
@@ -152,10 +155,11 @@ def main():
     # Load the coffea output
     print(f"Loading coffea output from {args.input_file}")
     output = load(args.input_file)
+    print(output.keys())
     
     # Extract histograms, cutflow, and metadata
     histograms = output["variables"]
-    cutflow = output["cutflow"]
+    cutflow = histograms["FatJetGood_eta"]
     datasets_metadata = output["datasets_metadata"]
     
     # Load configuration parameters
@@ -171,12 +175,12 @@ def main():
     
     # Update process samples based on what we found
     for process in mc_processes:
-        process.samples = sample_categories[process.name]
+        mc_processes[process].samples = sample_categories[mc_processes[process].name]
     
     for process in data_processes:
-        process.samples = sample_categories[process.name]
+        data_processes[process].samples = sample_categories[data_processes[process].name]
     
-    systematics = define_systematics(args.years, [p.name for p in mc_processes])
+    systematics = define_systematics(args.years, [mc_processes[p].name for p in mc_processes])
     
     # Create output directory
     output_dir = Path(args.output_dir)
@@ -190,8 +194,9 @@ def main():
     
     # Generate pt bin names 
     pt_bin_names = []
-    for pt_low, pt_high in pt_binning.values():
+    for pt_low, pt_high in pt_binning:
         pt_bin_names.append(f'Pt-{pt_low}to{pt_high}')
+        print("pt_bin_names", pt_bin_names)
     
     # Generate tagger category names
     tagger_names = []
@@ -199,7 +204,24 @@ def main():
         for wp, wp_value in wp_dict[tagger].items():
             for region in ["pass", "fail"]:
                 tagger_names.append(f"msd{int(msd)}{tagger}{region}{wp}wp")
-    
+
+    print(histograms[args.variable]["QCD_MuEnriched__QCD_MuEnriched_l"].keys())
+    h2d_dict = histograms["FatJetGood_logsumcorrSVmass_tau21"]
+    h1d_dict = {}
+
+    for proc, ds_dict in h2d_dict.items():
+        h1d_dict[proc] = {}
+        for ds, histo2d in ds_dict.items():
+            # ax_tau21 = histo2d.axes["FatJetGood.tau21"]
+            bin_stop = next(i for i, edge in enumerate(ax_tau21.edges[1:]) if edge > 0.3)
+            histo_cut = histo2d.integrate("FatJetGood.tau21", 0, bin_stop)
+            # breakpoint()
+            h1d_dict[proc][ds] = histo_cut
+    histograms["FatJetGood_logsumcorrSVmass_tau21"] = h1d_dict
+    print(histograms[args.variable]["QCD_MuEnriched__QCD_MuEnriched_l"].keys())
+    # histograms={args.variable : histograms[args.variable]}
+    # print(histograms.keys())
+
     # Create datacards for each combination
     for pt_bin_name in pt_bin_names:
         for tagger_name in tagger_names:
@@ -211,36 +233,36 @@ def main():
             
             print(f"Creating datacard for category: {category_name}")
             
-            try:
-                # Create datacard
-                datacard = Datacard(
-                    histograms=histograms,
-                    datasets_metadata=datasets_metadata,
-                    cutflow=cutflow,
-                    years=args.years,
-                    mc_processes=mc_processes,
-                    data_processes=data_processes,
-                    systematics=systematics,
-                    category=f"tagger__{tagger_name}__pt__{pt_bin_name}",  # Category string matching the multicuts structure
-                    variable=args.variable,
-                )
+            
+            # Create datacard
+            datacard = Datacard(
+                histograms=histograms[args.variable],
+                datasets_metadata=datasets_metadata,
+                cutflow=cutflow,
+                years=args.years,
+                mc_processes=mc_processes,
+                data_processes=data_processes,
+                systematics=systematics,
+                category=f"tagger__{tagger_name}__pt__{pt_bin_name}",  # Category string matching the multicuts structure
+                # variable=args.variable,
+            )
+            
+            # Save datacard
+            datacard_filename = f"datacard_{category_name}.txt"
+            datacard_path = category_dir / datacard_filename
+            
+            datacard.save_card(str(datacard_path))
+            datacard.save_histograms(str(category_dir / f"templates_{category_name}.root"))
+            
+            # Store for combination
+            all_datacards[str(datacard_path)] = datacard
+            
+            print(f"  Saved datacard: {datacard_path}")
+            print(f"  Saved templates: {category_dir / f'templates_{category_name}.root'}")
                 
-                # Save datacard
-                datacard_filename = f"datacard_{category_name}.txt"
-                datacard_path = category_dir / datacard_filename
-                
-                datacard.save_card(str(datacard_path))
-                datacard.save_histograms(str(category_dir / f"templates_{category_name}.root"))
-                
-                # Store for combination
-                all_datacards[str(datacard_path)] = datacard
-                
-                print(f"  Saved datacard: {datacard_path}")
-                print(f"  Saved templates: {category_dir / f'templates_{category_name}.root'}")
-                
-            except Exception as e:
-                print(f"  Error creating datacard for {category_name}: {e}")
-                continue
+            # except Exception as e:
+            #     print(f"  Error creating datacard for {category_name}: {e}")
+            #     continue
     
     # Create combined datacard
     print(f"\nCreating combined datacard...")
