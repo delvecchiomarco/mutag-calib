@@ -13,6 +13,7 @@ import argparse
 import yaml
 from pathlib import Path
 from coffea.util import load
+import matplotlib.pyplot as plt
 
 from pocket_coffea.utils.stat import MCProcess, DataProcess, SystematicUncertainty, Datacard, MCProcesses, DataProcesses, Systematics
 from pocket_coffea.utils.stat.combine import combine_datacards
@@ -153,34 +154,45 @@ def main():
     args = parser.parse_args()
     
     # Load the coffea output
-    print(f"Loading coffea output from {args.input_file}")
+    print(f"Loading coffea output from {args.input_file}\n")
     output = load(args.input_file)
-    print(output.keys())
+    print(f"output.keys(): {output.keys()}\n")
     
     # Extract histograms, cutflow, and metadata
     histograms = output["variables"]
+    print(f"Histogram keys: {histograms.keys()}\n")
     cutflow = histograms["FatJetGood_eta"]
+    print(f"Cutflow keys: {cutflow.keys()}\n")
     datasets_metadata = output["datasets_metadata"]
+    print(f"Datasets metadata keys: {datasets_metadata.keys()}\n")
     
     # Load configuration parameters
     taggers, pt_binning, wp_dict = load_parameters()
+    print(f"Taggers: {taggers}\n")
+    print(f"Pt binning: {pt_binning}\n")
+    print(f"WP dict: {wp_dict}\n")
     msd = 40.  # Mass cut value used in the analysis
     
     # Categorize samples
     sample_categories = categorize_samples(cutflow)
-    print(f"Found samples: {sample_categories}")
+    print(f"Found samples: {sample_categories}\n")
     
     # Define processes and systematics
     mc_processes, data_processes = define_processes(args.years)
+    print(f"mc_processes: {mc_processes}\n")
+    print(f"data_processes: {data_processes}\n")
     
     # Update process samples based on what we found
     for process in mc_processes:
+        print(f"process: {process}\n")
         mc_processes[process].samples = sample_categories[mc_processes[process].name]
     
     for process in data_processes:
+        print(f"process: {process}\n")
         data_processes[process].samples = sample_categories[data_processes[process].name]
     
     systematics = define_systematics(args.years, [mc_processes[p].name for p in mc_processes])
+    print(f"systematics: {systematics}\n")
     
     # Create output directory
     output_dir = Path(args.output_dir)
@@ -190,13 +202,13 @@ def main():
     all_datacards = {}
     
     # Loop over pt bins and tagger working points (following the structure in L97-108)
-    print("Creating datacards for each pt bin and tagger working point...")
+    print("Creating datacards for each pt bin and tagger working point...\n")
     
     # Generate pt bin names 
     pt_bin_names = []
     for pt_low, pt_high in pt_binning:
         pt_bin_names.append(f'Pt-{pt_low}to{pt_high}')
-        print("pt_bin_names", pt_bin_names)
+    print(f"pt_bin_names: {pt_bin_names}\n")
     
     # Generate tagger category names
     tagger_names = []
@@ -204,37 +216,39 @@ def main():
         for wp, wp_value in wp_dict[tagger].items():
             for region in ["pass", "fail"]:
                 tagger_names.append(f"msd{int(msd)}{tagger}{region}{wp}wp")
+    print(f"tagger_names: {tagger_names}\n")
 
-    print(histograms[args.variable]["QCD_MuEnriched__QCD_MuEnriched_l"].keys())
-    h2d_dict = histograms["FatJetGood_logsumcorrSVmass_tau21"]
+    print(histograms[args.variable]["QCD_MuEnriched__QCD_MuEnriched_l"].keys(), "\n")
+    h2d_dict = histograms[args.variable]
     h1d_dict = {}
 
+    print(f"h2d_dict.keys(): {h2d_dict.keys()}\n")
     for proc, ds_dict in h2d_dict.items():
+        # print(f"Processing {proc}...\n")
         h1d_dict[proc] = {}
+        # print(f"ds_dict.keys(): {ds_dict.keys()}\n")
         for ds, histo2d in ds_dict.items():
-            # ax_tau21 = histo2d.axes["FatJetGood.tau21"]
+            # print(f"Dataset: {ds}\n")
+            ax_tau21 = histo2d.axes["FatJetGood.tau21"]
             bin_stop = next(i for i, edge in enumerate(ax_tau21.edges[1:]) if edge > 0.3)
             histo_cut = histo2d.integrate("FatJetGood.tau21", 0, bin_stop)
             # breakpoint()
             h1d_dict[proc][ds] = histo_cut
     histograms["FatJetGood_logsumcorrSVmass_tau21"] = h1d_dict
-    print(histograms[args.variable]["QCD_MuEnriched__QCD_MuEnriched_l"].keys())
-    # histograms={args.variable : histograms[args.variable]}
-    # print(histograms.keys())
+    print(f"histograms.keys(): {histograms.keys()}\n")
 
     # Create datacards for each combination
     for pt_bin_name in pt_bin_names:
         for tagger_name in tagger_names:
             category_name = create_category_name(pt_bin_name, tagger_name)
+            print(f"category_name: {category_name}\n")
             
             # Create directory for this category
             category_dir = output_dir / category_name
             category_dir.mkdir(exist_ok=True)
             
-            print(f"Creating datacard for category: {category_name}")
-            
-            
             # Create datacard
+            print(f"Creating datacard for category: {category_name}\n")
             datacard = Datacard(
                 histograms=histograms[args.variable],
                 datasets_metadata=datasets_metadata,
